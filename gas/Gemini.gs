@@ -95,6 +95,23 @@ function ragErrorMessage_(error) {
  * 圖片觀察只能描述可見內容，不能據此推定作者、技術或正式成效。
  */
 function generateAnswer_(question, hits, cfg, conversation) {
+    
+  // V3 新功能：辨識回答深度
+  var depth = 'normal';
+
+  var match = /^(簡答|詳答)[:：]\s*(.+)$/s.exec(question);
+
+  if (match) {
+    depth = match[1] === '簡答' ? 'short' : 'detail';
+    question = match[2].trim();
+  }
+
+  var depthPrompt =
+    depth === 'short'
+      ? '請用30到50字簡短回答，僅保留最重要的資訊。'
+      : depth === 'detail'
+      ? '請用150到250字詳細回答，提供有履歷證據支持的背景、具體經驗和成果，資訊不足時不要補造。'
+      : '請用50到120字自然回答，保留原本的回答風格。';
   var instructions = [
     '你正在代表履歷主人本人回答訪客問題。無論問題是以第二人稱（「你」）或第三人稱（「這位求職者」、「本人」）提問，都請一律以第一人稱（「我」）的口吻來呈現。預設使用繁體中文；訪客明確指定其他語言時可使用該語言。',
     '只能根據提供的 evidence 回答我的履歷問題。語氣親切，可自然使用少量 Emoji。若有指定 answerMode=intro 或 overview，優先使用原本的專屬格式；其他一般問答依以下深度要求回答：' + depthPrompt,
@@ -113,24 +130,6 @@ function generateAnswer_(question, hits, cfg, conversation) {
     'dialogueIntent 表示本輪可觀察的交流目的，不是判斷訪客心情：introduction 初次認識、capability 評估能力與職務適配、achievement 關注有依據的成果亮點、interest 訪客明確表達想深入交流、appreciation 致謝收尾、clarification 對方需要釐清或有顧慮、neutral 一般資訊／技術細節。只選一種，不確定選 neutral。',
     '不要只因描述專案就一律慶祝，不把疑問理解為不友善，不推定對方已決定合作或錄用。貼圖由程式依意圖決定，不能指定 stickerId；答案仍須如實交代限制，不以熱情語氣掩蓋資料不足。'
   ].join('\n');
-  
-  // V3 新功能：辨識回答深度
-  var depth = 'normal';
-
-  var match = /^(簡答|詳答)[:：]\s*(.+)$/s.exec(question);
-
-  if (match) {
-    depth = match[1] === '簡答' ? 'short' : 'detail';
-    question = match[2].trim();
-  }
-
-  var depthPrompt =
-    depth === 'short'
-      ? '請用30到50字簡短回答，僅保留最重要的資訊。'
-      : depth === 'detail'
-      ? '請用150到250字詳細回答，提供有履歷證據支持的背景、具體經驗和成果，資訊不足時不要補造。'
-      : '請用50到120字自然回答，保留原本的回答風格。';
-
   var schema = { type: 'OBJECT', properties: {
     grounded: { type: 'BOOLEAN' }, answer: { type: 'STRING' },
     dialogueIntent: { type: 'STRING', enum: ['introduction', 'capability', 'achievement', 'interest', 'appreciation', 'clarification', 'neutral'] },
